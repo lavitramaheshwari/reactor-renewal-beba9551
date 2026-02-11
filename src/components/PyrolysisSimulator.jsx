@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Zap, Flame, Droplets, Wind, TrendingUp, Leaf, Award, ArrowRight, RotateCcw, Beaker, Thermometer, Snowflake, Info, Play, BookOpen, BarChart3, Package } from 'lucide-react';
 
 const PyrolysisSimulator = () => {
@@ -12,8 +12,47 @@ const PyrolysisSimulator = () => {
   const [coolingStarted, setCoolingStarted] = useState(false);
   const [sortingProgress, setSortingProgress] = useState({ biochar: 0, syngas: 0, liquidFuel: 0 });
   const [sortingComplete, setSortingComplete] = useState(false);
+  const [spawnedProducts, setSpawnedProducts] = useState([]);
+  const spawnIdRef = useRef(0);
   
   const biomassRatio = 100 - plasticRatio;
+  
+  // Microwave pyrolysis product generation based on feedstock composition
+  // Real yields: Plastic → ~65% oil, ~25% syngas, ~10% char
+  //              Biomass → ~25% oil, ~35% syngas, ~40% char
+  const getProductProbabilities = useCallback(() => {
+    const pFrac = plasticRatio / 100;
+    const bFrac = biomassRatio / 100;
+    const oilProb = pFrac * 0.65 + bFrac * 0.25;
+    const gasProb = pFrac * 0.25 + bFrac * 0.35;
+    // charProb is remainder
+    return { oilProb, gasProb };
+  }, [plasticRatio, biomassRatio]);
+  
+  // Spawn products in reactor during sorting stage
+  useEffect(() => {
+    if (stage !== 3 || sortingComplete) return;
+    
+    const interval = setInterval(() => {
+      const { oilProb, gasProb } = getProductProbabilities();
+      const roll = Math.random();
+      let type;
+      if (roll < oilProb) type = 'liquidFuel';
+      else if (roll < oilProb + gasProb) type = 'syngas';
+      else type = 'biochar';
+      
+      const id = spawnIdRef.current++;
+      const x = 10 + Math.random() * 75;
+      
+      setSpawnedProducts(prev => {
+        // Keep max 12 visible products
+        const filtered = prev.length >= 12 ? prev.slice(1) : prev;
+        return [...filtered, { id, type, x, spawnTime: Date.now() }];
+      });
+    }, 800);
+    
+    return () => clearInterval(interval);
+  }, [stage, sortingComplete, getProductProbabilities]);
   
   useEffect(() => {
     if (sortingProgress.biochar === 10 && sortingProgress.syngas === 10 && sortingProgress.liquidFuel === 10) {
@@ -151,6 +190,8 @@ const PyrolysisSimulator = () => {
     setCoolingStarted(false);
     setSortingProgress({ biochar: 0, syngas: 0, liquidFuel: 0 });
     setSortingComplete(false);
+    setSpawnedProducts([]);
+    spawnIdRef.current = 0;
   };
 
   const totalSorted = sortingProgress.biochar + sortingProgress.syngas + sortingProgress.liquidFuel;
@@ -187,6 +228,27 @@ const PyrolysisSimulator = () => {
           0% { transform: translateY(0) scale(1); opacity: 0.6; }
           50% { opacity: 1; }
           100% { transform: translateY(-20px) scale(0.5); opacity: 0; }
+        }
+        
+        @keyframes spawnRise {
+          0% { transform: translateY(100%) scale(0.3); opacity: 0; }
+          20% { opacity: 1; transform: translateY(60%) scale(0.8); }
+          40% { transform: translateY(30%) scale(1); }
+          100% { transform: translateY(0%) scale(1); opacity: 1; }
+        }
+        
+        @keyframes reactorGlow {
+          0%, 100% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+        }
+        
+        @keyframes smokePuff {
+          0% { transform: translateY(0) scale(1); opacity: 0.4; }
+          100% { transform: translateY(-40px) scale(2); opacity: 0; }
+        }
+        
+        .spawn-product {
+          animation: spawnRise 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
         }
         
         .animate-slide-in { animation: slideInUp 0.6s ease-out; }
@@ -542,56 +604,73 @@ const PyrolysisSimulator = () => {
               {/* Separator */}
               <div className="h-px bg-slate-700 mb-6" />
               
-              {/* Reactor output area with draggable items */}
-              <div className="card-inner p-6 mb-6 min-h-[200px] relative">
-                <div className="flex gap-4 flex-wrap">
-                  {sortingProgress.biochar < 10 && (
+              {/* Animated Reactor Output */}
+              <div className="card-inner p-6 mb-6 min-h-[240px] relative overflow-hidden">
+                {/* Reactor glow background */}
+                <div className="absolute inset-0 bg-gradient-to-t from-orange-950/30 via-transparent to-transparent pointer-events-none" />
+                <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-orange-900/20 to-transparent pointer-events-none">
+                  {/* Smoke particles */}
+                  {!sortingComplete && [...Array(5)].map((_, i) => (
                     <div
-                      draggable
-                      onDragStart={(e) => {
-                        e.dataTransfer.setData('productType', 'biochar');
-                        e.currentTarget.style.opacity = '0.5';
+                      key={`smoke-${i}`}
+                      className="absolute rounded-full bg-slate-500/20"
+                      style={{
+                        width: `${8 + Math.random() * 12}px`,
+                        height: `${8 + Math.random() * 12}px`,
+                        left: `${20 + Math.random() * 60}%`,
+                        bottom: '0',
+                        animation: `smokePuff ${2 + Math.random() * 2}s ease-out infinite`,
+                        animationDelay: `${Math.random() * 3}s`
                       }}
-                      onDragEnd={(e) => { e.currentTarget.style.opacity = '1'; }}
-                      className="w-24 h-24 bg-slate-800 border-2 border-slate-500 rounded-xl cursor-move hover:scale-110 transition-transform flex flex-col items-center justify-center"
-                      style={{ animation: 'float 3s ease-in-out infinite' }}
-                    >
-                      <Package className="w-8 h-8 text-slate-400 mb-1" />
-                      <span className="text-xs font-bold title-font text-slate-400">CHAR</span>
-                    </div>
-                  )}
+                    />
+                  ))}
+                </div>
+                
+                {/* Spawned products */}
+                <div className="flex gap-4 flex-wrap relative z-10 min-h-[180px] items-end">
+                  {spawnedProducts.map((product) => {
+                    const config = {
+                      biochar: { icon: Package, color: 'slate', bgClass: 'bg-slate-800', borderClass: 'border-slate-500', label: 'CHAR' },
+                      syngas: { icon: Wind, color: 'purple', bgClass: 'bg-purple-900/30', borderClass: 'border-purple-500', label: 'GAS' },
+                      liquidFuel: { icon: Droplets, color: 'yellow', bgClass: 'bg-yellow-900/30', borderClass: 'border-yellow-500', label: 'OIL' }
+                    }[product.type];
+                    const IconComp = config.icon;
+                    const colorMap = { slate: 'text-slate-400', purple: 'text-purple-400', yellow: 'text-yellow-500' };
+                    
+                    return (
+                      <div
+                        key={product.id}
+                        draggable
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData('productType', product.type);
+                          e.currentTarget.style.opacity = '0.5';
+                        }}
+                        onDragEnd={(e) => {
+                          e.currentTarget.style.opacity = '1';
+                          // Remove from spawned after successful drag
+                          setSpawnedProducts(prev => prev.filter(p => p.id !== product.id));
+                        }}
+                        className={`spawn-product w-20 h-20 ${config.bgClass} border-2 ${config.borderClass} rounded-xl cursor-move hover:scale-110 transition-transform flex flex-col items-center justify-center shadow-lg`}
+                        style={{ animationDelay: `${(product.id % 3) * 0.1}s` }}
+                      >
+                        <IconComp className={`w-7 h-7 ${colorMap[config.color]} mb-1`} />
+                        <span className={`text-[10px] font-bold title-font ${colorMap[config.color]}`}>{config.label}</span>
+                      </div>
+                    );
+                  })}
                   
-                  {sortingProgress.syngas < 10 && (
-                    <div
-                      draggable
-                      onDragStart={(e) => {
-                        e.dataTransfer.setData('productType', 'syngas');
-                        e.currentTarget.style.opacity = '0.5';
-                      }}
-                      onDragEnd={(e) => { e.currentTarget.style.opacity = '1'; }}
-                      className="w-24 h-24 bg-purple-900/30 border-2 border-purple-500 rounded-xl cursor-move hover:scale-110 transition-transform flex flex-col items-center justify-center"
-                      style={{ animation: 'float 3.5s ease-in-out infinite' }}
-                    >
-                      <Wind className="w-8 h-8 text-purple-400 mb-1" />
-                      <span className="text-xs font-bold title-font text-purple-400">GAS</span>
+                  {spawnedProducts.length === 0 && !sortingComplete && (
+                    <div className="flex-1 flex items-center justify-center text-slate-600 title-font text-sm tracking-wider py-8">
+                      PRODUCTS GENERATING...
                     </div>
                   )}
-                  
-                  {sortingProgress.liquidFuel < 10 && (
-                    <div
-                      draggable
-                      onDragStart={(e) => {
-                        e.dataTransfer.setData('productType', 'liquidFuel');
-                        e.currentTarget.style.opacity = '0.5';
-                      }}
-                      onDragEnd={(e) => { e.currentTarget.style.opacity = '1'; }}
-                      className="w-24 h-24 bg-yellow-900/30 border-2 border-yellow-500 rounded-xl cursor-move hover:scale-110 transition-transform flex flex-col items-center justify-center"
-                      style={{ animation: 'float 4s ease-in-out infinite' }}
-                    >
-                      <Droplets className="w-8 h-8 text-yellow-500 mb-1" />
-                      <span className="text-xs font-bold title-font text-yellow-500">OIL</span>
-                    </div>
-                  )}
+                </div>
+                
+                {/* Feedstock ratio indicator */}
+                <div className="absolute top-3 right-3 flex items-center gap-2 text-[10px] title-font tracking-wider text-slate-500">
+                  <span className="text-blue-400">{plasticRatio}% PLASTIC</span>
+                  <span>·</span>
+                  <span className="text-emerald-400">{biomassRatio}% BIOMASS</span>
                 </div>
               </div>
               
