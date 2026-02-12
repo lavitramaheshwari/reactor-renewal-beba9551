@@ -36,6 +36,18 @@ npm i
 npm run dev
 ```
 
+### Running with Docker
+
+You can also run the project using Docker.
+
+```sh
+# Step 1: Build the Docker image.
+docker build -t reactor-renewal .
+
+# Step 2: Run the Docker container.
+docker run -p 8080:80 reactor-renewal
+```
+
 **Edit a file directly in GitHub**
 
 - Navigate to the desired file(s).
@@ -62,7 +74,7 @@ This project is built with:
 
 ## How can I deploy this project?
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+This project is configured to deploy to GitHub Pages automatically on every push to the `main` branch.
 
 ## Can I connect a custom domain to my Lovable project?
 

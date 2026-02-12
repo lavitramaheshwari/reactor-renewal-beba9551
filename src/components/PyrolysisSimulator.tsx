@@ -1,30 +1,37 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, FC, MouseEvent, TouchEvent } from 'react';
 import { Zap, Flame, Droplets, Wind, TrendingUp, Leaf, Award, ArrowRight, RotateCcw, Beaker, Thermometer, Snowflake, Info, Play, BookOpen, BarChart3, Package } from 'lucide-react';
 
-const PyrolysisSimulator = () => {
-  const [stage, setStage] = useState(0);
-  const [plasticRatio, setPlasticRatio] = useState(50);
-  const [heatGrid, setHeatGrid] = useState(Array(10).fill().map(() => Array(10).fill(0)));
-  const [coolingPower, setCoolingPower] = useState(50);
-  const [gasTemp, setGasTemp] = useState(600);
-  const [isDragging, setIsDragging] = useState(false);
-  const [coolingTime, setCoolingTime] = useState(0);
-  const [coolingStarted, setCoolingStarted] = useState(false);
-  const [sortingProgress, setSortingProgress] = useState({ biochar: 0, syngas: 0, liquidFuel: 0 });
-  const [sortingComplete, setSortingComplete] = useState(false);
-  const [spawnedProducts, setSpawnedProducts] = useState([]);
-  const [losses, setLosses] = useState(0);
-  const [productQueue, setProductQueue] = useState([]);
-  const [totalSpawned, setTotalSpawned] = useState(0);
-  const spawnIdRef = useRef(0);
+interface SpawnedProduct {
+  id: number;
+  type: 'liquidFuel' | 'syngas' | 'biochar';
+  x: number;
+  spawnTime: number;
+}
+
+const PyrolysisSimulator: FC = () => {
+  const [stage, setStage] = useState<number>(0);
+  const [plasticRatio, setPlasticRatio] = useState<number>(50);
+  const [heatGrid, setHeatGrid] = useState<number[][]>(Array(10).fill(null).map(() => Array(10).fill(0)));
+  const [coolingPower, setCoolingPower] = useState<number>(50);
+  const [gasTemp, setGasTemp] = useState<number>(600);
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [coolingTime, setCoolingTime] = useState<number>(0);
+  const [coolingStarted, setCoolingStarted] = useState<boolean>(false);
+  const [sortingProgress, setSortingProgress] = useState<{ biochar: number; syngas: number; liquidFuel: number; }>({ biochar: 0, syngas: 0, liquidFuel: 0 });
+  const [sortingComplete, setSortingComplete] = useState<boolean>(false);
+  const [spawnedProducts, setSpawnedProducts] = useState<SpawnedProduct[]>([]);
+  const [losses, setLosses] = useState<number>(0);
+  const [productQueue, setProductQueue] = useState<('liquidFuel' | 'syngas' | 'biochar')[]>([]);
+  const [totalSpawned, setTotalSpawned] = useState<number>(0);
+  const spawnIdRef = useRef<number>(0);
   
   // Touch drag state
-  const [touchDragType, setTouchDragType] = useState(null);
-  const [touchDragId, setTouchDragId] = useState(null);
+  const [touchDragType, setTouchDragType] = useState<'liquidFuel' | 'syngas' | 'biochar' | null>(null);
+  const [touchDragId, setTouchDragId] = useState<number | null>(null);
   
   const biomassRatio = 100 - plasticRatio;
   
-  const handlePlasticChange = (val) => {
+  const handlePlasticChange = (val: string) => {
     const clamped = Math.max(0, Math.min(100, parseInt(val) || 0));
     setPlasticRatio(clamped);
   };
@@ -41,10 +48,10 @@ const PyrolysisSimulator = () => {
   useEffect(() => {
     if (stage === 3 && productQueue.length === 0) {
       const { oilProb, gasProb } = getProductProbabilities();
-      const queue = [];
+      const queue: ('liquidFuel' | 'syngas' | 'biochar')[] = [];
       for (let i = 0; i < 15; i++) {
         const roll = Math.random();
-        let type;
+        let type: 'liquidFuel' | 'syngas' | 'biochar';
         if (roll < oilProb) type = 'liquidFuel';
         else if (roll < oilProb + gasProb) type = 'syngas';
         else type = 'biochar';
@@ -82,7 +89,7 @@ const PyrolysisSimulator = () => {
     }
   }, [sortingProgress, losses, totalSpawned]);
   
-  const handleDrop = (binType, productType, productId) => {
+  const handleDrop = (binType: 'liquidFuel' | 'syngas' | 'biochar', productType: 'liquidFuel' | 'syngas' | 'biochar', productId: number) => {
     if (productType === binType) {
       setSortingProgress(prev => ({ ...prev, [binType]: prev[binType] + 1 }));
     } else {
@@ -172,7 +179,7 @@ const PyrolysisSimulator = () => {
     };
   };
   
-  const handleCellInteraction = (row, col) => {
+  const handleCellInteraction = (row: number, col: number) => {
     if (stage !== 2) return;
     setHeatGrid(prev => {
       const newGrid = prev.map(r => [...r]);
@@ -181,12 +188,12 @@ const PyrolysisSimulator = () => {
     });
   };
   
-  const handleMouseDown = (row, col) => {
+  const handleMouseDown = (row: number, col: number) => {
     setIsDragging(true);
     handleCellInteraction(row, col);
   };
   
-  const handleMouseEnter = (row, col) => {
+  const handleMouseEnter = (row: number, col: number) => {
     if (isDragging || stage === 2) {
       handleCellInteraction(row, col);
     }
@@ -197,39 +204,39 @@ const PyrolysisSimulator = () => {
   };
   
   // Touch handlers for heat grid
-  const handleTouchGrid = (e) => {
+  const handleTouchGrid = (e: TouchEvent<HTMLDivElement>) => {
     if (stage !== 2) return;
     const touch = e.touches[0];
-    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    const el = document.elementFromPoint(touch.clientX, touch.clientY) as HTMLElement;
     if (el && el.dataset.row !== undefined) {
-      handleCellInteraction(parseInt(el.dataset.row), parseInt(el.dataset.col));
+      handleCellInteraction(parseInt(el.dataset.row), parseInt(el.dataset.col!));
     }
   };
   
   // Touch handlers for product sorting
-  const handleTouchStart = (type, id) => {
+  const handleTouchStart = (type: 'liquidFuel' | 'syngas' | 'biochar', id: number) => {
     setTouchDragType(type);
     setTouchDragId(id);
   };
   
-  const handleTouchEnd = (e) => {
+  const handleTouchEnd = (e: TouchEvent<HTMLDivElement>) => {
     if (!touchDragType || touchDragId === null) return;
     const touch = e.changedTouches[0];
     const el = document.elementFromPoint(touch.clientX, touch.clientY);
     // Walk up to find bin
-    let target = el;
+    let target = el as HTMLElement;
     while (target && !target.dataset.bin) {
-      target = target.parentElement;
+      target = target.parentElement as HTMLElement;
     }
     if (target && target.dataset.bin) {
-      handleDrop(target.dataset.bin, touchDragType, touchDragId);
+      handleDrop(target.dataset.bin as 'liquidFuel' | 'syngas' | 'biochar', touchDragType, touchDragId);
     }
     setTouchDragType(null);
     setTouchDragId(null);
   };
   
   const FeedstockParticles = () => {
-    const particles = [];
+    const particles: JSX.Element[] = [];
     const particleCount = 40;
     for (let i = 0; i < particleCount; i++) {
       const isPlastic = (i / particleCount) < (plasticRatio / 100);
@@ -500,8 +507,8 @@ const PyrolysisSimulator = () => {
                       min="0"
                       max="100"
                       value={biomassRatio}
-                      readOnly
-                      className="w-full pointer-events-none"
+                      onChange={(e) => handlePlasticChange(100 - parseInt(e.target.value))}
+                      className="w-full"
                       style={{
                         background: `linear-gradient(to right, #34d399 0%, #34d399 ${biomassRatio}%, #334155 ${biomassRatio}%, #334155 100%)`,
                         color: '#34d399'
