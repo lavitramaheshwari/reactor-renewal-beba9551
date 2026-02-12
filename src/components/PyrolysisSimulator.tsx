@@ -457,6 +457,16 @@ const PyrolysisSimulator: FC = () => {
               <Play className="w-5 h-5" fill="white" />
               START MISSION
             </button>
+            
+            <a
+              href="https://thermowave-dynamics.github.io/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block mt-4 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white font-bold py-3 px-8 sm:py-4 sm:px-12 rounded-xl text-base sm:text-lg title-font transition-all duration-300 hover:scale-105 inline-flex items-center gap-3"
+            >
+              <ArrowRight className="w-5 h-5" />
+              RETURN TO MAIN SITE
+            </a>
           </div>
         </div>
       )}
