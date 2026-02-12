@@ -119,11 +119,11 @@ const PyrolysisSimulator: FC = () => {
   
   // Cooling: Interactive condensation system based on input ratios
   useEffect(() => {
-    if (stage === 4 && coolingStarted && coolingTime < 20) {
+    if (stage === 4 && coolingStarted && coolingTime < 15) {
       const interval = setInterval(() => {
         setCoolingTime(prev => {
           const next = prev + 0.1;
-          if (next >= 20) return 20;
+          if (next >= 15) return 15;
           return next;
         });
         setGasTemp(prev => {
@@ -864,80 +864,189 @@ const PyrolysisSimulator: FC = () => {
           <div className="max-w-4xl w-full">
             <div className="card p-4 sm:p-8 animate-fade-in">
               <div className="flex items-center gap-3 mb-2">
-                <Snowflake className="w-6 h-6 sm:w-7 sm:h-7 text-cyan-400" />
+                <Snowflake className="w-6 h-6 sm:w-7 sm:h-7 text-cyan-400 animate-pulse" />
                 <h2 className="text-xl sm:text-2xl md:text-3xl font-bold title-font">Level 4: Syngas Cooling</h2>
               </div>
               <p className="text-slate-400 text-sm sm:text-base mb-6 sm:mb-8">Condense the hot syngas into liquid fuel by managing the cooling intensity.</p>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
-                <div className="space-y-6">
-                  <div className="card-inner p-6 flex items-center justify-center h-36">
-                    <div className="flex gap-3">
-                      {[...Array(6)].map((_, i) => (
-                        <div key={i} className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-purple-500/30 border border-purple-500/50" />
-                      ))}
+                {/* Left: Cooling Chamber Visualization */}
+                <div className="space-y-4 sm:space-y-6">
+                  {/* Cooling Chamber */}
+                  <div className="card-inner p-4 sm:p-6 relative overflow-hidden">
+                    <div className="absolute top-2 left-2 right-2 flex items-center justify-between">
+                      <span className="text-[10px] sm:text-xs font-bold title-font tracking-wider text-slate-500">COOLING CHAMBER</span>
+                      <Thermometer className="w-4 h-4 text-red-400" />
+                    </div>
+                    
+                    {/* Chamber container */}
+                    <div className="mt-6 relative h-32 sm:h-40 bg-slate-900/80 rounded-xl border border-slate-600/50 overflow-hidden">
+                      {/* Hot gas inlet pipe (left) */}
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-8 h-12 bg-gradient-to-r from-red-900/60 to-red-700/40 border-r border-red-500/30 rounded-r-lg" />
+                      
+                      {/* Chamber interior */}
+                      <div className="absolute left-8 right-8 top-2 bottom-2 bg-gradient-to-br from-slate-800/60 to-slate-900/80 rounded-lg border border-slate-600/30">
+                        {/* Cooling coils */}
+                        {[...Array(3)].map((_, i) => (
+                          <div
+                            key={i}
+                            className="absolute left-2 right-2 h-1.5 bg-cyan-500/20 rounded-full"
+                            style={{ top: `${25 + i * 20}%` }}
+                          />
+                        ))}
+                        
+                        {/* Syngas particles animation */}
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          {[...Array(8)].map((_, i) => (
+                            <div
+                              key={i}
+                              className="absolute w-2 h-2 rounded-full bg-purple-500/60 animate-ping"
+                              style={{
+                                left: `${15 + Math.random() * 70}%`,
+                                top: `${20 + Math.random() * 60}%`,
+                                animationDelay: `${i * 0.2}s`,
+                                animationDuration: '1.5s'
+                              }}
+                            />
+                          ))}
+                        </div>
+                        
+                        {/* Flow indicator */}
+                        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-6 h-12 bg-gradient-to-l from-cyan-900/40 to-cyan-700/20 border-l border-cyan-500/30 rounded-l-lg flex items-center justify-center">
+                          <div className="w-2 h-2 bg-cyan-400/50 rounded-full animate-pulse" />
+                        </div>
+                      </div>
+                      
+                      {/* Chamber glow effect */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-cyan-500/5 to-transparent pointer-events-none" />
+                    </div>
+                    
+                    {/* Temperature scale */}
+                    <div className="mt-3 flex items-center justify-between text-[9px] sm:text-[10px] title-font tracking-wider text-slate-500">
+                      <span>600°C</span>
+                      <span className="text-cyan-400 font-bold">TARGET 400°C</span>
+                      <span>100°C</span>
                     </div>
                   </div>
-                  <div className="card-inner p-6 flex items-center justify-center h-40">
-                    <span className="text-xs sm:text-sm font-bold title-font tracking-wider text-slate-500">FUEL RECOVERY</span>
+                  
+                  {/* Fuel Recovery Display */}
+                  <div className="card-inner p-4 sm:p-6 flex flex-col items-center justify-center">
+                    <span className="text-[10px] sm:text-xs font-bold title-font tracking-wider text-slate-500 mb-2">ESTIMATED FUEL RECOVERY</span>
+                    <div className="flex items-end gap-1">
+                      <span className="text-2xl sm:text-3xl font-bold title-font text-yellow-500">0</span>
+                      <span className="text-sm sm:text-base font-bold title-font text-yellow-500/70 mb-1">L</span>
+                    </div>
+                    <div className="w-full h-2 bg-slate-800 rounded-full mt-3 overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-yellow-600 to-yellow-400 rounded-full" style={{ width: '0%' }} />
+                    </div>
                   </div>
                 </div>
                 
-                <div className="space-y-6">
+                {/* Right: Controls */}
+                <div className="space-y-4 sm:space-y-6">
+                  {/* Cooling Power Slider */}
                   <div className="card-inner p-4 sm:p-6">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
                         <Snowflake className="w-5 h-5 text-cyan-400" />
                         <span className="font-semibold text-cyan-400 text-sm sm:text-base">Cooling Power</span>
                       </div>
-                      <span className="text-lg sm:text-xl font-bold title-font">0%</span>
+                      <span className="text-xl sm:text-2xl font-bold title-font text-cyan-400">{coolingPower}%</span>
                     </div>
                     <input
                       type="range"
                       min="0"
                       max="100"
-                      value={0}
-                      readOnly
-                      className="w-full pointer-events-none"
-                      style={{ background: `linear-gradient(to right, #06b6d4 0%, #06b6d4 0%, #334155 0%, #334155 100%)`, color: '#06b6d4' }}
+                      value={coolingPower}
+                      onChange={(e) => setCoolingPower(parseInt(e.target.value))}
+                      className="w-full cursor-pointer"
+                      style={{
+                        background: `linear-gradient(to right, #06b6d4 0%, #06b6d4 ${coolingPower}%, #334155 ${coolingPower}%, #334155 100%)`,
+                        color: '#06b6d4'
+                      }}
                     />
                     
-                    <div className="grid grid-cols-2 gap-3 mt-4">
-                      <div className="card-inner p-3">
+                    {/* Power indicator dots */}
+                    <div className="flex justify-between mt-3">
+                      {[0, 25, 50, 75, 100].map((level) => (
+                        <div
+                          key={level}
+                          className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full transition-all duration-300 ${
+                            coolingPower >= level ? 'bg-cyan-400 shadow-lg shadow-cyan-400/50' : 'bg-slate-700'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3 mt-5">
+                      <div className="card-inner p-3 bg-slate-900/50">
                         <div className="text-[10px] sm:text-xs font-bold title-font tracking-wider text-slate-500 mb-1">GAS TEMP</div>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1.5">
                           <Thermometer className="w-4 h-4 text-red-400" />
-                          <span className="font-bold title-font text-sm sm:text-base">600°</span>
+                          <span className="font-bold title-font text-base sm:text-lg">600°<span className="text-xs text-slate-500">C</span></span>
                         </div>
                       </div>
-                      <div className="card-inner p-3">
+                      <div className="card-inner p-3 bg-slate-900/50">
                         <div className="text-[10px] sm:text-xs font-bold title-font tracking-wider text-slate-500 mb-1">EFFICIENCY</div>
-                        <span className="font-bold title-font text-sm sm:text-base">0%</span>
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-4 h-4 rounded-full bg-yellow-500/20 border border-yellow-500/50 flex items-center justify-center">
+                            <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse" />
+                          </div>
+                          <span className="font-bold title-font text-base sm:text-lg">0%</span>
+                        </div>
                       </div>
                     </div>
                   </div>
                   
+                  {/* Info Cards */}
                   <div className="card-inner p-4 sm:p-5">
                     <div className="flex items-start gap-3">
                       <Info className="w-5 h-5 text-cyan-400 mt-0.5 flex-shrink-0" />
-                      <div className="text-xs sm:text-sm text-slate-300">
-                        <p className="mb-1">Cooling too <span className="text-red-400 font-semibold">slowly</span> results in gas loss.</p>
-                        <p>Cooling too <span className="text-cyan-400 font-semibold">fast</span> can trap impurities.</p>
+                      <div className="text-xs sm:text-sm text-slate-300 space-y-2">
+                        <p className="flex items-center gap-2">
+                          <span className="text-red-400 font-semibold">Too slow</span>
+                          <span className="text-slate-500">→</span>
+                          <span className="text-slate-400">gas loss</span>
+                        </p>
+                        <p className="flex items-center gap-2">
+                          <span className="text-cyan-400 font-semibold">Too fast</span>
+                          <span className="text-slate-500">→</span>
+                          <span className="text-slate-400">trapped impurities</span>
+                        </p>
                       </div>
                     </div>
+                  </div>
+                  
+                  {/* Tips */}
+                  <div className="bg-cyan-900/20 border border-cyan-500/30 rounded-xl p-3 sm:p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-5 h-5 rounded-full bg-cyan-500/20 flex items-center justify-center">
+                        <span className="text-xs font-bold text-cyan-400">!</span>
+                      </div>
+                      <span className="text-xs sm:text-sm font-bold title-font tracking-wider text-cyan-400">PRO TIP</span>
+                    </div>
+                    <p className="text-xs sm:text-sm text-slate-400">
+                      Maintain <span className="text-white font-semibold">400°C</span> for optimal condensation efficiency
+                    </p>
                   </div>
                 </div>
               </div>
               
-              <div className="mt-6 text-center">
-                <p className="text-xs sm:text-sm title-font tracking-wider text-slate-500 mb-2">TARGET: 400°C FOR OPTIMAL CONDENSATION</p>
-                <p className={`text-base sm:text-lg font-bold title-font ${feedback.color}`}>{feedback.text}</p>
+              {/* Status Bar */}
+              <div className="mt-6 p-3 sm:p-4 bg-slate-900/60 rounded-xl border border-slate-700/50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
+                    <span className="text-xs sm:text-sm title-font tracking-wider text-slate-400">READY TO START</span>
+                  </div>
+                  <span className="text-xs sm:text-sm text-slate-500">Duration: 15 seconds</span>
+                </div>
               </div>
             </div>
             
             <button
               onClick={() => setCoolingStarted(true)}
-              className="w-full mt-4 sm:mt-6 bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-3 sm:py-4 px-8 rounded-xl text-base sm:text-lg title-font transition-all duration-300 hover:scale-[1.02] flex items-center justify-center gap-3"
+              className="w-full mt-4 sm:mt-6 bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 text-white font-bold py-4 sm:py-5 px-8 rounded-xl text-base sm:text-lg title-font transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-cyan-500/30 flex items-center justify-center gap-3 animate-pulse-glow"
             >
               <Snowflake className="w-5 h-5" />
               START COOLING
